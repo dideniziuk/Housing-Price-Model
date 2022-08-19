@@ -1,0 +1,494 @@
+---
+title: "STAT 1361 Housing Price Model"
+author: "David Deniziuk"
+date: "4/16/2021"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# import libraries and data
+```{r,warning=F,message=F}
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(boot)
+library(leaps)
+library(pls)
+library(glmnet)
+library(gam)
+library(tree)
+library(randomForest)
+library(gbm)
+library(ggplot2)
+library(gridExtra)
+```
+
+
+```{r,warning=F,message=F}
+data <- read_csv("train.csv") 
+test_final <- read_csv("test.csv") 
+```
+
+# data exploration and alteration
+
+frequencies of home type in both training and test set
+```{r,warning=F,message=F}
+g1 <- ggplot(data, aes(x=desc)) +
+  geom_bar()
+g2 <- ggplot(test_final, aes(x=desc)) +
+  geom_bar()
+```
+
+
+
+data exploration with histograms
+```{r,warning=F,message=F}
+par(mfrow = c(3,3))
+hist(data$numstories)
+hist(data$yearbuilt)
+hist(data$totalrooms)
+hist(data$bedrooms)
+hist(data$bathrooms)
+hist(data$sqft)
+hist(data$lotarea)
+```
+
+
+
+
+here we see what happens when rows with "NA" fireplace values are removed
+```{r,warning=F,message=F}
+train.omit <- data %>% drop_na(fireplaces)
+#train.omit                          #only PA observations (713 rows)
+
+train.pa <- data %>% filter(state == "PA")
+#train.pa                             #only PA observations (713 rows), same output as above
+```
+
+Through omitting NA values we can see that 687 of the rows were removed.  This is the same amount of rows which belong to Virginia houses.  After careful inspection of the data, we can see that all of the NA fireplace values belonged to Virginia houses, and every Virginia house had an NA value.  Because the value is missing for a large subset (half) of the data, and it is specific to a factor of another variable, I will remove this variable from my models.  
+
+```{r,warning=F,message=F}
+data <- data %>% select(-"fireplaces")
+#train_temp
+```
+
+
+
+removing the id column so that I can run models more effectively and easily.
+```{r,warning=F,message=F}
+data <- data %>% select(-"id")
+```
+
+
+
+will now convert all of the categorical variables into factors
+```{r,warning=F,message=F}
+data$desc <- factor(data$desc)
+data$exteriorfinish <- factor(data$exteriorfinish)
+data$rooftype <- factor(data$rooftype)
+data$state <- factor(data$state)
+data$zipcode <- factor(data$zipcode)
+data$basement <- factor(data$basement)
+```
+
+
+
+When I first attempted to fit models, I ran into a problem where a new factor was found for desc: "MOBILE HOME".  Considering it appears to be the only mobile home in the dataset, I am going to remove it a) so that I can run models, and b) because it is likely not important for inference about all of the other non-mobile homes.  
+```{r,warning=F,message=F}
+data <- data %>% filter(desc != "MOBILE HOME")
+#data
+```
+
+# modeling
+
+splitting data into a train and a test set
+```{r,warning=F,message=F}
+set.seed(1)
+train_index <- sample(nrow(data), nrow(data)*0.75)
+train <- data[train_index,]
+test <- data[-train_index,]
+
+attach(train)
+#train
+#test
+```
+
+
+
+multiple regression (train/test)
+```{r,warning=F,message=F}
+fit.lm <- lm(price~., data=train)
+pred.lm <- predict(fit.lm, newdata = test)
+MSE.lm <- mean((pred.lm - test$price)^2)
+MSE.lm
+
+
+TSS.lm = mean((test$price - mean(test$price))^2)
+RSS.lm = 1 - MSE.lm/TSS.lm
+RSS.lm
+```
+
+MSE = 21991435394
+R^2 = 0.8403971
+
+
+
+multiple regression (LOOCV)  
+I unfortunately was not able to use the predictor zipcode in the LOOCV multiple regression model due to an error relating to zipcodes that only appear once in data and therefore return an error when doing LOOCV.  
+```{r,warning=F,message=F}
+fit.LOOCV <- glm(price~., data=data[,-14])
+err.LOOCV <- cv.glm(data[,-14],fit.LOOCV)
+MSE.LOOCV <- err.LOOCV$delta
+MSE.LOOCV
+
+TSS.LOOCV = mean((test$price - mean(test$price))^2)
+RSS.LOOCV = 1 - MSE.LOOCV/TSS.LOOCV
+RSS.LOOCV
+```
+
+MSE = 18256744101
+R^2 = 0.8675017
+
+
+
+multiple regression (5 fold CV)
+```{r,warning=F,message=F}
+set.seed(1)
+fit.CV5 <- glm(price~., data=data[,-14])
+err.CV5 <- cv.glm(data[,-14],fit.CV5,K=10)
+MSE.CV5 <- err.CV5$delta
+MSE.CV5
+
+TSS.CV5 = mean((test$price - mean(test$price))^2)
+RSS.CV5 = 1 - MSE.CV5/TSS.CV5
+RSS.CV5
+```
+
+MSE = 18203389232
+R^2 = 0.8678889
+
+
+
+multiple regression (10 fold CV)
+```{r,warning=F,message=F}
+set.seed(1)
+fit.CV10 <- glm(price~., data=data[,-14])
+err.CV10 <- cv.glm(data[,-14],fit.CV10,K=10)
+MSE.CV10 <- err.CV10$delta
+MSE.CV10
+
+TSS.CV10 = mean((test$price - mean(test$price))^2)
+RSS.CV10 = 1 - MSE.CV10/TSS.CV10
+RSS.CV10
+```
+
+MSE = 18203389232
+R^2 = 0.8678889
+
+
+
+forward selection (chosen via test MSE)\
+```{r,warning=F,message=F}
+model.regfit <- regsubsets(price~., data=train, nvmax=66, method = "forward", really.big = T) 
+#summary(model.regfit)
+
+
+test.mat <- model.matrix(price ~ ., data = test)
+val.errors <- rep(0,63)
+for(i in 1:63){
+  coefi = coef(model.regfit, id  = i)
+  pred = test.mat[,names(coefi)]%*%coefi
+  val.errors[i] = mean((test$price - pred)^2)
+}
+
+which.min(val.errors)
+MSE <- min(val.errors)
+MSE
+
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - MSE/TSS
+RSS
+```
+Forward Selection is not very interpretable because each of the levels on each factor variable is treated as its own dummy variable.  This results in there being 66 variables considered for selection.\
+In forward selection, model with 49 predictors is chosen.  This is not super meaningful because most of these variables just come from the factor variables which have many categories (zip code)\
+MSE = 22107638091
+R^2 = 0.8395538
+
+
+
+backward selection (chosen via test MSE)
+```{r,warning=F,message=F}
+model.regfit <- regsubsets(price~., data=train, nvmax=66, method = "backward", really.big = T) 
+#summary(model.regfit)
+
+
+test.mat <- model.matrix(price ~ ., data = test)
+val.errors <- rep(0,63)
+for(i in 1:63){
+  coefi = coef(model.regfit, id  = i)
+  pred = test.mat[,names(coefi)]%*%coefi
+  val.errors[i] = mean((test$price - pred)^2)
+}
+
+which.min(val.errors)
+MSE <- min(val.errors)
+MSE
+
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - MSE/TSS
+RSS
+```
+
+In backward selection, model with 28 predictors is chosen.  This is not super meaningful because most of these variables just come from the factor variables which have many categories (zip code)
+MSE = 21364993680
+R^2 = 0.8449435
+
+
+
+ridge regression
+```{r,warning=F,message=F}
+grid = 10^seq(10, -2, length=100)
+trainx <- model.matrix(price ~ .,train)
+trainy <- train$price
+testx <- model.matrix(price ~ .,test)
+
+set.seed(1)
+
+model.ridge <- glmnet(trainx, trainy, alpha = 0, lambda = grid)  # fit model
+
+cv.ridge <- cv.glmnet(trainx, trainy, alpha = 0, lambda = grid) #doing cv on model
+
+lambda_best <- cv.ridge$lambda.min  #selecting best lambda
+
+predict.ridge <- predict(model.ridge,s=lambda_best, newx =testx)
+
+MSE <- mean((test$price-predict.ridge)^2)
+MSE
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - MSE/TSS
+RSS
+```
+
+MSE = 21944647071
+R^2 = 0.8407367
+
+
+
+lasso
+```{r,warning=F,message=F}
+set.seed(1)
+model.lasso <- glmnet(trainx, trainy, alpha = 1, lambda = grid)  # fit model
+
+cv.lasso <- cv.glmnet(trainx, trainy, alpha = 1, lambda = grid) #doing cv on model
+
+lambda_best <- cv.lasso$lambda.min  #selecting best lambda
+
+predict.lasso <- predict(model.lasso,s=lambda_best, newx =testx)
+
+MSE <- mean((test$price-predict.lasso)^2)
+MSE
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - MSE/TSS
+RSS
+```
+
+MSE = 21273707382
+R^2 = 0.845606
+
+
+
+
+principal component regression
+
+Both desc and zipcode were resulting in errors, so they were removed from the model.  Model with maximum components is selected, as well.  This means that it is no better than OLS.  It is actually worse because we had to remove two of the factor variables. 
+```{r,warning=F,message=F}
+model.pcr <- pcr(price~., data = train[,-c(2,14)], scale = T, validation = "CV")
+validationplot(model.pcr, val.type = "MSEP")
+
+predict.pcr <- predict(model.pcr, test, ncomp = 18)
+MSE <- mean((test$price-predict.pcr)^2)
+MSE
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - MSE/TSS
+RSS
+```
+
+MSE = 24660096418
+R^2 = 0.8210293
+
+
+
+partial least squares
+```{r,warning=F,message=F}
+model.pls <- plsr(price ~ ., data = train[,-c(2,14)], scale = T, validation = "CV")
+validationplot(model.pls, val.type = "MSEP")
+
+predict.plsr <- predict(model.pls, test, ncomp=17)
+MSE <- mean((test$price-predict.plsr)^2)
+MSE
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - MSE/TSS
+RSS
+```
+
+MSE = 24660086593
+R^2 = 0.8210294
+
+
+
+gam (with smoothing splines)
+```{r,warning=F,message=F}
+gam.fit <- gam(price~desc+s(numstories)+s(yearbuilt)+exteriorfinish+rooftype+basement+s(totalrooms)+s(bedrooms)+s(bathrooms)+s(sqft)+s(lotarea)+state+zipcode+s(AvgIncome),data=train)
+
+preds <- predict(gam.fit,newdata = test)
+gam.mse=mean((test$price-preds)^2)
+gam.mse
+
+gam.tss = mean((test$price - mean(test$price))^2)
+test.rss = 1 - gam.mse/gam.tss
+test.rss
+```
+
+MSE = 20312328048
+R^2 = 0.8525833
+
+
+
+regression tree
+zipcode was removed because too many factor levels  
+```{r,warning=F,message=F}
+tree <- tree(price~.,data=train[,-14])
+tree.pred <- predict(tree,test)
+MSE <- mean((tree.pred-test$price)^2)
+MSE
+
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - MSE/TSS
+RSS
+```
+
+MSE = 38331894450
+R^2 = 0.7218062
+
+
+
+does pruning help?
+```{r,warning=F,message=F}
+cv.tree <- cv.tree(tree)
+plot(cv.tree$size,cv.tree$dev,type="b")
+cv.tree
+```
+cv chooses the unpruned tree
+
+
+
+but if i actually decided to prune it
+```{r,warning=F,message=F}
+prune <- prune.tree(tree,best=9)
+tree.pred <- predict(prune,test)
+MSE <- mean((tree.pred - test$price)^2)
+MSE
+```
+worse than unpruned tree, as expected
+
+
+
+bagging
+```{r,warning=F,message=F}
+set.seed(1)
+bag <- randomForest(price~., data = train, importance=TRUE,ntree=500)
+pred.bag <- predict(bag,test)
+MSE <- mean((pred.bag-test$price)^2)
+MSE
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - MSE/TSS
+RSS
+importance(bag)
+varImpPlot(bag)
+```
+
+MSE = 17390023572
+R^2 = 0.8737919
+
+
+
+random forest
+```{r,warning=F,message=F}
+set.seed(2)
+bag <- randomForest(price~., data = train, mtry = 14/3, importance=TRUE,ntree=500)
+pred.bag <- predict(bag,test)
+MSE <- mean((pred.bag-test$price)^2)
+MSE
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - MSE/TSS
+RSS
+importance(bag)
+varImpPlot(bag)
+```
+
+MSE = 15888493678
+R^2 = 0.8846892
+
+
+
+boosting
+```{r,warning=F,message=F}
+set.seed(1)
+exp <- seq(-10,0,by=0.2)
+lambdas <- 10^exp
+MSE <- rep(0,length(lambdas))
+
+for(i in 1:length(lambdas)){
+boost <- gbm(price~., data=train, distribution = "gaussian", n.trees = 1000,interaction.depth=4, shrinkage=lambdas[i])
+pred <- predict(boost,newdata = test,ntrees=1000)
+MSE[i] <- mean((pred-test$price)^2)
+}
+plot(lambdas,MSE)
+min(MSE)
+lambdas[which.min(MSE)]
+summary(boost)
+```
+
+```{r,warning=F,message=F}
+TSS = mean((test$price - mean(test$price))^2)
+RSS = 1 - min(MSE)/TSS
+RSS
+```
+
+MSE = 11124706853    This occurs at a $\lambda$ value of 0.1
+R^2 = 0.9192624
+
+
+# final predictions
+
+on test set using best model, boosting:
+```{r}
+set.seed(1)
+boost_final <- gbm(price~., data=train, distribution = "gaussian", n.trees = 1000,interaction.depth=4, shrinkage=0.1)
+pred_final <- predict(boost_final,newdata = test_final,ntrees=1000)
+
+
+final_dataframe <- data.frame(id = test_final$id,
+                              price = pred_final,
+                              student_id = rep(4332611,600)
+)
+head(final_dataframe)
+head(test_final, 10)
+```
+
+
+export dataframe to csv
+```{r}
+write.csv(final_dataframe,"/Users/david/Code/STAT 1361/testing_predictions_4332611.csv", row.names = FALSE)
+```
+
+
+
+
+
