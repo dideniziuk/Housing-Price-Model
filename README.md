@@ -1,4 +1,5 @@
-# Project Overview
+# Housing Price Model
+## Project Overview
 Final Project for STAT 1361 (Statistical Learning and Data Science)
 House Pricing Model
 
@@ -11,7 +12,7 @@ I employed various statistical learning and ML techniques to build and fit an op
 
 Along with attaining predictions, we were also tasked with producing reports for technical and non-technical audiences of our findings and methods.  These reports help to keep interpretability of results in mind.  
 
-# File Descriptions
+## File Descriptions
 [**housing_price_model.rmd**](housing_price_model.Rmd): rmarkdown code from start to finish.  Broken into subsections (imports, data exploration/alteration, modeling, final predictions)
 
 [**test.csv**](test.csv): test data
