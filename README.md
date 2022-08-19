@@ -9,4 +9,4 @@ Before model creation, I undertook some exploratory data analysis in order to be
 As per my professor's instructions, I built models on a training set which included variables like number of bedrooms, zipcode, and roof type.  The response variable for these predictive models was house price.  The output prices from the best performing (test set) model were submitted to be compared against actual home listing prices.  This, in theory, identified under-priced and over-priced properties.  
 I employed various statistical learning and ML techniques to build and fit an optimal predictive model. These include regression, LOOCV, PCR, PLS, lasso regression, ridge regression, boosting, bagging, and random forest. 
 
-Along with attaining predictions, we were also tasked with producing reports for technical and non-technical audiences of our findings and methods.  Both pdf's are attached. These reports help to keep interpretability of results in mind.  
+Along with attaining predictions, we were also tasked with producing reports for technical and non-technical audiences of our findings and methods.  These reports help to keep interpretability of results in mind.  
