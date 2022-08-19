@@ -12,15 +12,15 @@ I employed various statistical learning and ML techniques to build and fit an op
 Along with attaining predictions, we were also tasked with producing reports for technical and non-technical audiences of our findings and methods.  These reports help to keep interpretability of results in mind.  
 
 # File Descriptions
-housing_price_model.rmd: rmarkdown code from start to finish.  Broken into subsections (imports, data exploration/alteration, modeling, final predictions)
+**housing_price_model.rmd**: rmarkdown code from start to finish.  Broken into subsections (imports, data exploration/alteration, modeling, final predictions)
 
-test.csv: test data
+**test.csv**: test data
 
-train.csv: training data
+**train.csv**: training data
 
-testing_predictions.csv: final csv export containing predicted prices
+**testing_predictions.csv**: final csv export containing predicted prices
 
-non_technical_report.pdf: brief business-oriented report describing the task at hand and the most important results in a non-technical manner
+**non_technical_report.pdf**: brief business-oriented report describing the task at hand and the most important results in a non-technical manner
 
-technical_report.pdf:  in-depth technical report walking through the various steps of the project.  follows same workflow as the code (housing_price_model.rmd).  explains reasoning for data alterations as well as takeaways from each individual statistical learning technique as applied to the data.  finally gives conclusions and interprets results
+**technical_report.pdf**:  in-depth technical report walking through the various steps of the project.  follows same workflow as the code (housing_price_model.rmd).  explains reasoning for data alterations as well as takeaways from each individual statistical learning technique as applied to the data.  finally gives conclusions and interprets results
 
