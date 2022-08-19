@@ -18,6 +18,8 @@ test.csv: test data
 
 train.csv: training data
 
+testing_predictions.csv: final csv export containing predicted prices
+
 non_technical_report.pdf: brief business-oriented report describing the task at hand and the most important results in a non-technical manner
 
 technical_report.pdf:  in-depth technical report walking through the various steps of the project.  follows same workflow as the code (housing_price_model.rmd).  explains reasoning for data alterations as well as takeaways from each individual statistical learning technique as applied to the data.  finally gives conclusions and interprets results
