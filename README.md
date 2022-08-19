@@ -1,4 +1,4 @@
-# Projoect Overview
+# Project Overview
 Final Project for STAT 1361 (Statistical Learning and Data Science)
 House Pricing Model
 
