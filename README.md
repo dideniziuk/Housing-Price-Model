@@ -12,7 +12,7 @@ I employed various statistical learning and ML techniques to build and fit an op
 Along with attaining predictions, we were also tasked with producing reports for technical and non-technical audiences of our findings and methods.  These reports help to keep interpretability of results in mind.  
 
 # File Descriptions
-**housing_price_model.rmd**: rmarkdown code from start to finish.  Broken into subsections (imports, data exploration/alteration, modeling, final predictions)
+[**housing_price_model.rmd**](housing_price_model.rmd): rmarkdown code from start to finish.  Broken into subsections (imports, data exploration/alteration, modeling, final predictions)
 
 **test.csv**: test data
 
