@@ -15,6 +15,8 @@ Along with attaining predictions, we were also tasked with producing reports for
 ## File Descriptions
 [**housing_price_model.rmd**](housing_price_model.Rmd): rmarkdown code from start to finish.  Broken into subsections (imports, data exploration/alteration, modeling, final predictions)
 
+[**markdown.pdf**](markdown.pdf): Knitted output of the code.
+
 [**test.csv**](test.csv): test data
 
 [**train.csv**](train.csv): training data
